@@ -1,55 +1,75 @@
 import math
+import argparse
 
-class Loan:
-    def principal(self):
-        self.loan_principal = int(input('Enter the loan principal:\n'))
+# read arguments
+parser = argparse.ArgumentParser()
+parser.add_argument('--type', type=str)
+parser.add_argument('--principal', type=float)
+parser.add_argument('--payment', type=float)
+parser.add_argument('--periods', type=int)
+parser.add_argument('--interest', type=float)
 
-    def monthly(self):
-        self.monthly_payment = float(input('Enter the monthly payment:\n'))
+args = parser.parse_args()
 
-    def months(self):
-        self.periods = int(input('Enter the number of periods:\n'))
+# initialize variables
+ann_diff = args.type
+principal = args.principal
+payment = args.payment
+periods = args.periods
+interest = args.interest / 1200 if args.interest else None
 
-    def interest(self):
-        self.inter = float(input('Enter the loan interest:\n')) / 1200
+
+# annuity calculations
+def annuity(principal=None, payment=None, periods=None, interest=None):
+    if not principal:
+        principal = round(payment
+                          / ((interest * ((1 + interest) ** periods))
+                             / (((1 + interest) ** periods) - 1)))
+        print(f'Your principal is: {principal}!')
+
+    elif not payment:
+        payment = math.ceil(principal
+                            * (interest * ((1 + interest) ** periods))
+                            / (((1 + interest) ** periods) - 1))
+        print(f'Your monthly payment is: {payment}!')
+
+    elif not periods:
+        periods = round(math.log(payment / (payment - interest * principal), 1 + interest))
+        years, months = divmod(periods, 12)  # divide periods by 12 into tuple as (years, months)
+        year = f'{years} years' if bool(years > 1) else (f'{years} year' if bool(years > 0)
+                                                         else '')
+        month = f'{months} months' if bool(months > 1) else (f'{months} month'
+                                                             if bool(months > 0) else '')
+        conjoin = ' and ' if year and month else ''
+        print(f'It will take {year}{conjoin}{month} to repay this loan!')
+
+    overpayment = round((payment * periods) - principal)
+    print(f'Overpayment = {overpayment}')
 
 
-print('What do you want to calculate?\n'
-      'type "n" for number of monthly payments,\n'
-      'type "a" for annuity monthly payment amount,\n'
-      'type "p" for loan principal:')
-choice = input()
+# differential calculations
+def diff(principal=None, periods=None, interest=None):
+    all_payments = []
+    for month in range(1, periods + 1):
+        payment = math.ceil((principal / periods)
+                            + interest
+                            * (principal - ((principal * (month - 1)) / periods)))
+        all_payments.append(payment)
+        print(f'Month {month}: payment is {payment}')
+    total_payments = sum(all_payments)
+    overpayment = round(total_payments - principal)
+    print(f'Overpayment = {overpayment}')
 
-if choice == 'n':  # periods
-    loan = Loan()
-    loan.principal()
-    loan.monthly()
-    loan.interest()
-    periods = math.ceil(math.log(loan.monthly_payment /
-                                 (loan.monthly_payment - loan.inter * loan.loan_principal),
-                                 1 + loan.inter))
-    years, months = divmod(periods, 12)  # divides periods by 12 into tuple as (years, months)
-    year = f'{years} years' if bool(years > 1) else (f'{years} year' if bool(years > 0)
-                                                     else '')
-    month = f'{months} months' if bool(months > 1) else (f'{months} month'
-                                                         if bool(months > 0) else '')
-    yearsand = ' and ' if year and month else ''
-    print(f'It will take {year}{yearsand}{month} to repay this loan!')
 
-elif choice == 'a':  # annuity monthly payment
-    loan = Loan()
-    loan.principal()
-    loan.months()
-    loan.interest()
-    annuity = loan.loan_principal * (loan.inter * ((1 + loan.inter) ** loan.periods)) /\
-              (((1 + loan.inter) ** loan.periods) - 1)
-    print(math.ceil(annuity))
-
-elif choice == 'p':  # principal
-    loan = Loan()
-    loan.monthly()
-    loan.months()
-    loan.interest()
-    principal = loan.monthly_payment / ((loan.inter * ((1 + loan.inter) ** loan.periods)) /
-                                        (((1 + loan.inter) ** loan.periods) - 1))
-    print(math.ceil(principal))
+# business logic
+if not ann_diff or not interest or (ann_diff == 'diff' and payment) \
+        or len(vars(args)) < 4 \
+        or (principal and principal < 0) \
+        or (payment and payment < 0) \
+        or (periods and periods < 0) \
+        or (interest and interest < 0):
+    print('Incorrect parameters')
+elif ann_diff == 'annuity':
+    annuity(principal=principal, payment=payment, periods=periods, interest=interest)
+elif ann_diff == 'diff':
+    diff(principal=principal, periods=periods, interest=interest)
